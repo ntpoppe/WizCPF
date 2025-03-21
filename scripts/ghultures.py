@@ -16,21 +16,21 @@ def natural_movement(interations: int = 100) -> None:
         if not client.is_player_idle():
             return
 
-        if random.random() < 0.5:
+        if random.random() < 0.7:
             time.sleep(3)
             continue
 
-        forward_duration = random.uniform(0.8, 1.2)
+        forward_duration = random.uniform(0.3, 0.7)
         client.hold_key("W", forward_duration)
 
-        time.sleep(random.uniform(0.5, 1.2))
+        time.sleep(random.uniform(0.2, 0.7))
 
-        backward_duration = forward_duration * random.uniform(0.9, 1.1)
+        backward_duration = forward_duration * random.uniform(0.3, 0.7)
         client.hold_key("S", backward_duration)
 
-        time.sleep(random.uniform(0.2, 0.5))
+        time.sleep(random.uniform(0.05, 0.5))
 
-        if random.random() < 0.25:
+        if random.random() < 0.4:
             if last_direction is None:
                 lateral_key = random.choice(['A', 'D'])
             else:
@@ -46,9 +46,11 @@ def check_mana() -> bool:
         return True
 
     if client.has_potion():
+        print("refilling mana")
         client.consume_potion()
         return True
 
+    print("out of potions, teleporting to commons to dc")
     client.teleport_to_commons()
     return False
 
@@ -60,6 +62,7 @@ while True:
     if not check_mana():
         break;
 
+    print("searching")
     natural_movement()
     print("entered combat")
 
@@ -72,18 +75,33 @@ while True:
     
     client.wait_for_player_turn()
 
-    while client.count_enemies < 2:
+    while client.count_enemies() < 2:
+        print("waiting for 2nd enemy")
         client.pass_turn()
         client.wait_for_player_turn()
 
-    epic = client.find_spell("epic")
-    scarecrow = client.find_spell("scarecrow")
-    if epic and scarecrow:
-        client.enchant("scarecrow", "epic")
-        client.cast_spell('enchanted_scarecrow')
+    print("enemy count check passed")
 
+    while not client.find_spell("scarecrow") and client.find_spell("unusable_scarecrow"):
+        print("need pip for scarecrow, passing")
+        client.pass_turn()
+        client.wait_for_player_turn()
+
+    if not client.find_spell("epic") and not client.find_spell("scarecrow"):
+        print("somehow, neither epic or scarecrow were found. breaking script")
+        break
+
+    client.enchant("scarecrow", "epic")
+
+    while not client.find_spell("enchanted_scarecrow"):
+        print("need pip for scarecrow, passing")
+        client.pass_turn()
+        client.wait_for_player_turn()
+
+    client.cast_spell('enchanted_scarecrow')
+
+    print("waiting for combat to end")
     while not client.is_player_idle():
-        print("waiting for combat to end")
         time.sleep(3)
 
 print("bot has been terminated (assuming by mana)")
